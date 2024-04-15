@@ -1,5 +1,6 @@
 import axios from 'axios';
 import * as cheerio from 'cheerio';
+import { extractPrice } from '../utils';
 
 export async function scrapeAmazonProduct(url: string) {
     if (!url) return;
@@ -10,27 +11,27 @@ export async function scrapeAmazonProduct(url: string) {
 
     const port = 22225;
     const session_id = (1000000 * Math.random()) | 0;
+
+    const proxyUrl = `http://${username}-session-${session_id}:${password}@brd.superproxy.io:${port}`;
     const options = {
-        auth: {
-            username: `${username}-session-${session_id}`,
-            password,
+        proxy: {
+            host: proxyUrl,
+            port: 80,
         },
-        host: "brd.superproxy.io", 
-        port,
-        rejectUnauthorized: false,
     };
+
     try {
-        //fetch amazon page
-        const response = await axios.get(url,options);
+        // Fetch amazon page
+        const response = await axios.get(url, options);
         const $ = cheerio.load(response.data);
 
-        const title = $(`#productTitle`).text().trim();
-       const currentPrice = extractPrice();
+        const title = $('#productTitle').text().trim();
+        const currentPrice = extractPrice($('.priceToPay span.a-price-whole').text());
+        const originalPrice = extractPrice($('#priceblock_ourprice').text());
+
+        console.log({ title, currentPrice, originalPrice });
         
     } catch (error: any) {
-        throw new Error(`Failed to scrape product: ${error.message}`)
-        
+        throw new Error(`Failed to scrape product: ${error.message}`);
     }
-
-    
 }
